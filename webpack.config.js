@@ -12,12 +12,13 @@ fs.readdirSync('node_modules')
 
 module.exports = {
   target: 'node',
-  entry: [
-    './src/main2.ts'
-  ],
+  entry: {
+    main: path.resolve(__dirname, './src/main2.ts'),
+    child: path.resolve(__dirname, './src/child.ts')
+  },
   output: {
-    filename: '/bundle.js',
-    path: './dist'
+    filename: '[name].bundle.js',
+    path: path.resolve(__dirname, './dist')
   },
   externals: nodeModules,
   module: {
