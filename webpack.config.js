@@ -13,7 +13,7 @@ fs.readdirSync('node_modules')
 module.exports = {
   target: 'node',
   entry: {
-    main: path.resolve(__dirname, './src/main2.ts'),
+    main: path.resolve(__dirname, './src/main.ts'),
     child: path.resolve(__dirname, './src/child.ts')
   },
   output: {

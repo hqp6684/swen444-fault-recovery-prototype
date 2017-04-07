@@ -28,10 +28,11 @@ export class ChildServer implements HeartbeatSender {
         this.app.use(bodyParser.urlencoded());
 
 
+        this.send(2222);
+        this.setListeners();
         // start server
         this.app.listen(this.port);
 
-        this.send(2222);
     }
 
 
@@ -53,6 +54,7 @@ export class ChildServer implements HeartbeatSender {
     send(sendInternal: number): void {
         // throw new Error('Method not implemented.');a
         setInterval(() => {
+            console.log('send signal');
 
             let body: HeartBeatMessage = { PID: process.pid, isPrimary: this.isPrimary, isAlive: true };
             let options: request.CoreOptions = {
