@@ -14,8 +14,8 @@ export class MainServer implements HeartbeatReceiver {
     expireTime: number;
     lastUpdateTime: Date;
 
-    // private primaryProcess: ChildProcess;
-    // private secondaryProcess: ChildProcess;
+    private primaryProcess: ChildProcess;
+    private secondaryProcess: ChildProcess;
 
     private port = 8080;
     checkAlive(hbSender: HeartbeatSender): boolean {
@@ -63,62 +63,19 @@ export class MainServer implements HeartbeatReceiver {
     private spawnChild() {
         const spawn = require('child_process').spawn;
 
-        // const ls = spawn('ls', ['-lh', '/usr']);
 
-        // ls.stdout.on('data', (data: any) => {
-        //     console.log(`stdout: ${data}`);
-        // });
+        let childServerFilePath = '/Users/huypham/typescript/swen/444/wp2-backend-template/dist/child.bundle.js';
 
-        // ls.stderr.on('data', (data: any) => {
-        //     console.log(`stderr: ${data}`);
-        // });
+        this.primaryProcess = spawn('node', [childServerFilePath, `${this.port + 1}`, this.port.toString()]);
+        this.primaryProcess.stdout.on('data', (data: any) => {
 
-        // ls.on('close', (code: any) => {
-        //     console.log(`child process exited with code ${code}`);
-        // });
-
-        // spawn from import above
-        // const ls2 = spawn('ls', ['-lh', '/usr']);
-
-        // console.log(pathFIle);
-
-        let ls3 = spawn('node', ['/Users/huypham/typescript/swen/444/wp2-backend-template/dist/child.bundle.js', '8081', '8000']);
-        // let ls3 = spawn('node', [pathFIle, '8081', '8080']);
-        console.log(ls3.pid);
-        // this.primaryProcess = spawn('node',[ path.resolve(__dirname, './dist/child.bundle.js'),`${this.port + 1}`,this.port.toString()]);
-        ls3.stdout.on('data', (data: any) => {
-            console.log(`stdout: ${data}`);
+            console.log(`Primary stdout: ${data}`);
         });
-        // ls3.stdout.on('error', (err: any) => { console.log(err) });
-
-        // let ls2: ChildProcess = spawn('node', [path.resolve(__dirname, './dist/child.bundle.js'), `${this.port + 1}`, this.port.toString()]);
-        // console.log(ls2.pid);
-        // // this.primaryProcess = spawn('node',[ path.resolve(__dirname, './dist/child.bundle.js'),`${this.port + 1}`,this.port.toString()]);
-        // ls2.stdout.on('data', (data: any) => {
-        //     console.log(`stdout: ${data}`);
-        // })
-        // primaryProcess.stderr.on('data', (data: any) => {
-        //     // console.log('wat');
-        //     console.log(data);
-        // })
-        // ls2.on('error', (error: any) => {
-        //     console.log(`Error: ${error}`)
-        // });
-
-        // let secondaryProcess = spawn('node', [
-        //     path.resolve(__dirname, 'dist/child.bundle.js'),
-        //     `${this.port + 2}`,
-        //     this.port.toString()
-        // ])
-        // secondaryProcess.stdout.on('data', (data: any) => {
-        //     console.log(data);
-        // })
-        // this.secondaryProcess.stderr.on('data', (data) => {
-        //     console.log(data);
-        // })
-        // secondaryProcess.on('error', (error: any) => {
-        //     console.log(error);
-        // })
+        //
+        this.secondaryProcess = spawn('node', [childServerFilePath, `${this.port + 2}`, this.port.toString()]);
+        this.secondaryProcess.stdout.on('data', (data: any) => {
+            console.log(`Secondary stdout: ${data}`);
+        });
     }
 
 
