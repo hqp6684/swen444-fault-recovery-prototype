@@ -33,6 +33,8 @@ export class ChildServer implements HeartbeatSender {
         // start server
         this.app.listen(this.port);
 
+        this.criticalFunction();
+
     }
 
 
@@ -77,6 +79,20 @@ export class ChildServer implements HeartbeatSender {
             let body: HeartBeatMessage = { PID: process.pid, isPrimary: this.isPrimary, isAlive: true };
             res.json(body);
         })
+    }
+
+
+    public criticalFunction() {
+        let myNumber = (Math.random() * 30);
+        setInterval(() => {
+            myNumber = myNumber - 1;
+            if (myNumber < 0) {
+                console.log('Crashing!!!');
+                throw Error('ahhhhh')
+            }
+        }, 1000)
+
+
     }
 
 
