@@ -1,12 +1,10 @@
-import * as request from 'Request';
-import { Component } from './Component/component';
+import { ChildServer } from './child-server/child-server';
 
-function a() {
 
-    let c = new Component();
-    console.log(process.argv[2]);
-    c.run(process.argv[2])
+function main() {
+    let childPort = Number(process.argv[2]);
+    let parentPort = Number(process.argv[3]);
+    console.log('Initializing Child Server');
+    let childServer = new ChildServer(childPort, parentPort);
 }
-a(
-
-);
+main();
