@@ -11,6 +11,10 @@ fs.readdirSync('node_modules')
   });
 
 module.exports = {
+  node: {
+    __dirname: true,
+    __filename: true
+  },
   target: 'node',
   entry: {
     main: path.resolve(__dirname, './src/main.ts'),

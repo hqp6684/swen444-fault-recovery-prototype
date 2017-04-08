@@ -1,3 +1,4 @@
+import { HeartBeatMessage } from '../heartbeat/heartbeat-message';
 import { HeartbeatReceiver } from '../heartbeat/heartbeat-receiver';
 import { HeartbeatSender } from '../heartbeat/heartbeat-sender';
 import * as expressLib from 'express';
@@ -7,21 +8,27 @@ import * as bodyParser from 'body-parser';
 import * as path from 'path';
 import { ChildProcess } from 'child_process';
 import * as request from 'request';
-// const spawn = require('child_process').spawn;
+import 'rxjs';
+
+import { AsyncSubject } from 'rxjs';
+
+// Used to spawn child process
+const spawn = require('child_process').spawn;
 
 export class MainServer implements HeartbeatReceiver {
-    checkingInterval: number;
+    // 10sec
+    checkingInterval: number = 10000;
     checkingTime: number;
     expireTime: number;
     lastUpdateTime: Date;
 
     private primaryProcess: ChildProcess;
+    private primaryProcessPort: number;
     private secondaryProcess: ChildProcess;
+    private secondaryProcessPort: number;
 
     private port = 8080;
-    checkAlive(hbSender: HeartbeatSender): boolean {
-        throw new Error('Method not implemented.');
-    }
+    static childProcessPortCounter: number;
 
     // http server
     private app: Express;
@@ -32,7 +39,7 @@ export class MainServer implements HeartbeatReceiver {
         // bodyParser is used to read body of HTTP request
         this.app.use(bodyParser.urlencoded({ extended: true }));
         // this.setUpServer();
-        this.setUpHeartBeat();
+        this.setUpListenerEndpoints();
         this.runServer();
     }
 
@@ -43,19 +50,22 @@ export class MainServer implements HeartbeatReceiver {
     private runServer(): void {
         console.log('Main server is listening on port '.concat(this.port.toString()));
         this.app.listen(this.port);
-        this.spawnChild();
+        MainServer.childProcessPortCounter = this.port;
+        this.initChildren();
     }
 
 
-    private setUpHeartBeat() {
+    setUpListenerEndpoints() {
         this.lastUpdateTime = new Date();
         // origin of this server is : http://localhost:port
-        // let receiverEndPoint = '/heartbeat';
-        // Listen to POST request from child server at http://localhost:port/k
         // this.app.post('/', this.processHeartBeatSignal)
         this.app.post('/', (req, res) => {
-            // console.log(req.body);
-        })
+            console.log('Heartbeat message received: ');
+            console.log(req.body);
+            console.log('');
+
+        });
+
 
     }
 
@@ -63,45 +73,125 @@ export class MainServer implements HeartbeatReceiver {
         // console.log(req.protocol);
         // console.log(req.rawHeaders);
         // console.log(req.)
-        // console.log(req.body);
-        res.send('received');
+        console.log(req.body);
+        // res.send('received');
     }
 
 
-    private spawnChild() {
-        const spawn = require('child_process').spawn;
+    private initChildren() {
+        this.spawnPrimaryProcess();
+        this.spawnSecondaryProcess();
+
+        this.setPrimary();
+        this.checkAlive();
+    }
 
 
-        let childServerFilePath = '/Users/huypham/typescript/swen/444/wp2-backend-template/dist/child.bundle.js';
+    private spawnPrimaryProcess() {
+        let childServerFilePath = path.resolve(__dirname, '../../', 'dist/child.bundle.js');
 
-        this.primaryProcess = spawn('node', [childServerFilePath, `${this.port + 1}`, this.port.toString()]);
+        MainServer.childProcessPortCounter = MainServer.childProcessPortCounter + 1;
+        this.primaryProcessPort = MainServer.childProcessPortCounter;
+        this.primaryProcess = spawn('node', [childServerFilePath, this.primaryProcessPort.toString(), this.port.toString()]);
         this.primaryProcess.stdout.on('data', (data: any) => {
-
             console.log(`Primary stdout: ${data}`);
         });
-        this.primaryProcess.on('error', (data: any) => {
 
-            console.log(`Primary stdout: ${data}`);
-        });
-        //
-        this.secondaryProcess = spawn('node', [childServerFilePath, `${this.port + 2}`, this.port.toString()]);
+    }
+
+    private spawnSecondaryProcess() {
+        let childServerFilePath = path.resolve(__dirname, '../../', 'dist/child.bundle.js');
+        MainServer.childProcessPortCounter = MainServer.childProcessPortCounter + 1;
+        this.secondaryProcessPort = MainServer.childProcessPortCounter;
+        this.secondaryProcess = spawn('node', [childServerFilePath, this.secondaryProcessPort.toString(), this.port.toString()]);
         this.secondaryProcess.stdout.on('data', (data: any) => {
             console.log(`Secondary stdout: ${data}`);
         });
-        this.secondaryProcess.on('error', (data: any) => {
-
-            console.log(`Primary stdout: ${data}`);
-        });
-
-        this.setPrimary();
     }
 
 
 
     setPrimary() {
-        request.get('http://localhost:8081/isPrimary', (res) => {
-            console.log(res.body);
+        let url = `http://localhost:${this.primaryProcessPort}/isPrimary`;
+        request.get(url, (error, res: request.RequestResponse, body) => {
+            console.log(body);
         })
+
+    }
+
+    /**
+     * Check if Primary process is alive every checkingInterval(defined above) seconds 
+     * 
+     * if(false)
+     *  => kill primary => promote secondary to primary 
+     * 
+     */
+    checkAlive() {
+        setInterval(() => {
+            console.log(`Last update time: `);
+            console.log(this.lastUpdateTime);
+            this.lastUpdateTime = new Date();
+
+            console.log('Checking primary process:');
+
+            let url = `http://localhost:${this.primaryProcessPort}/isAlive`;
+            request.get(url, (error, res: request.RequestResponse, body) => {
+
+                if (error) { // child process died
+                    console.log('Primary Child Process dead')
+                    // check secondary
+                    this.checkSecondaryAlive()
+                        .subscribe(isAlive => {
+                            if (isAlive) {
+                                console.log('');
+                                console.log('Switching primary child process');
+                                this.primaryProcessPort = this.secondaryProcessPort;
+
+                                this.primaryProcess.kill();
+                                this.primaryProcess = this.secondaryProcess;
+                                // set primary
+                                this.setPrimary();
+                                // spawn new back up proces
+                                this.spawnSecondaryProcess();
+
+                            }
+                        })
+                } else {
+
+                    console.log('Primary is alive');
+                }
+
+            })
+
+
+        }, this.checkingInterval)
+    }
+
+    /**
+     * Check secondary process 
+     * @return 
+     */
+    private checkSecondaryAlive() {
+        let result = new AsyncSubject<boolean>();
+
+        console.log('Checking secondary process: ');
+
+        let url = `http://localhost:${this.secondaryProcessPort}/isAlive`;
+        request.get(url, (error, res: request.RequestResponse, body) => {
+
+            if (error) { // child process died
+                console.log('Secondary child Process dead')
+                result.next(false);
+                // check secondary
+            } else {
+
+                console.log('Secondadry child process is alive');
+                result.next(true);
+            }
+            result.complete();
+
+        })
+        return result;
 
     }
 

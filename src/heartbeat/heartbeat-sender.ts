@@ -2,7 +2,7 @@
 
 export interface HeartbeatSender {
 
-    isAlive(hbReceiverUrl: string): boolean;
+    isAlive(args?: any): any;
 
     /**
      * @param sendInterval time

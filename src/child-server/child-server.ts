@@ -5,6 +5,8 @@ import * as expressLib from 'express';
 import { Express, Response, Request } from 'express';
 import * as bodyParser from 'body-parser';
 import * as request from 'request';
+import { Observable } from 'rxjs';
+import 'rxjs'
 
 
 export class ChildServer implements HeartbeatSender {
@@ -16,6 +18,10 @@ export class ChildServer implements HeartbeatSender {
     private port: number;
     private isPrimary: boolean = false;
     private parentPort: number;
+    // 1000 = 1sec
+    private heartbeatInterval = 7000;
+
+    private criticalFunction: Observable<any>;
 
 
     constructor(port: number, parentPort: number) {
@@ -27,13 +33,14 @@ export class ChildServer implements HeartbeatSender {
         // bodyParser is used to read body of HTTP request
         this.app.use(bodyParser.urlencoded());
 
+        this.setCriticalFunction()
 
-        this.send(2222);
-        this.setListeners();
+        // start sending signal
+        this.send(this.heartbeatInterval);
+
+        this.setEndPoints();
         // start server
         this.app.listen(this.port);
-
-        this.criticalFunction();
 
     }
 
@@ -50,89 +57,69 @@ export class ChildServer implements HeartbeatSender {
 
     }
 
-    isAlive(hbReceiverUrl: string): boolean {
-        throw new Error('Method not implemented.');
+    isAlive(): boolean {
+        // check condition here
+        return true;
     }
-    send(sendInternal: number): void {
-        // throw new Error('Method not implemented.');a
+
+    /**
+     * Send a signal to heartbeat receiver every @sendInternal
+     */
+    send(interval: number): void {
+
         setInterval(() => {
-            // console.log('send signal');
-
             let body: HeartBeatMessage = { PID: process.pid, isPrimary: this.isPrimary, isAlive: true };
-            console.log(JSON.stringify(body));
-
-
-
-            let options: request.CoreOptions = {
-                body: JSON.stringify(body)
-            }
-            // request.post(`http://localhost:${this.parentPort}`, options, (res) => {
-            //     console.log(res);
-            // });
-            request.post(`http://localhost:${this.parentPort}`, { form: body }, (res) => {
-                console.log(res);
+            request.post(`http://localhost:${this.parentPort}`, { form: body }, (err, res: request.RequestResponse, body) => {
+                // console.log(res.body);
             });
-        }, sendInternal)
+        }, interval)
     }
 
 
 
-    private setListeners() {
+    private setEndPoints() {
 
         this.app.get('/isPrimary', (req, res) => {
-            console.log('iam not the primary');
             this.isPrimary = true;
-            res.send('got it');
+            let responseMessage: HeartBeatMessage = { PID: process.pid, isPrimary: this.isPrimary, isAlive: true };
+            res.json(responseMessage);
+            console.log('iam now the primary');
+            console.log('Activating critical function');
+            this.criticalFunction.subscribe(value => {
+                console.log('Critical function completed')
+            })
         });
 
+
+
         this.app.get('/isAlive', (req, res) => {
-            // this.isPrimary = true;
-            let body: HeartBeatMessage = { PID: process.pid, isPrimary: this.isPrimary, isAlive: true };
-            res.json(body);
+            if (this.isAlive()) {
+                let responseMessage: HeartBeatMessage = { PID: process.pid, isPrimary: this.isPrimary, isAlive: true };
+                res.json(responseMessage);
+            } else {
+                res.sendStatus(500);
+            }
+
         })
     }
 
 
-    public criticalFunction() {
-        setInterval(() => {
-            if (!this.isPrimary) return;
-
-
-            let myNumber = Math.floor((Math.random() * 15));
-            // let myNumber = 0;
-
-            while (this.doMath(myNumber)) {
-                // myNumber = (Math.random() * 30);
-                this.doMath(myNumber)
-            }
-
-
-
-        }, 1000)
+    public setCriticalFunction() {
+        // The sequence will push out the first value after 5 second has elapsed
+        let source = Observable.timer(1800, 5000)
+            .switchMap(() => {
+                let num = Math.floor(Math.random() * 9);
+                if (Math.sqrt(num - 1)) {
+                    return Observable.of(true)
+                } else {
+                    throw Error('Bad input')
+                }
+            })
+        this.criticalFunction = source;
 
 
     }
 
-    private doMath(num: number) {
-
-        setInterval(() => {
-            num = num - 2;
-
-            let result = Math.sqrt(num);
-            console.log('alive');
-            if (isNaN(result)) {
-                console.log('err');
-                throw Error('Cannot divide by NaN')
-            }
-            if (num === 0) {
-                return true;
-            } else {
-                this.doMath(num);
-            }
-            return true;
-
-        }, 1000)
-    }
 
 
 
