@@ -22,6 +22,7 @@ export class ChildServer implements HeartbeatSender {
     private heartbeatInterval = 7000;
 
     private criticalFunction: Observable<any>;
+    private isRunning = false;
 
 
     constructor(port: number, parentPort: number) {
@@ -85,6 +86,7 @@ export class ChildServer implements HeartbeatSender {
             res.json(responseMessage);
             console.log('iam now the primary');
             console.log('Activating critical function');
+            this.isRunning = true;
             this.criticalFunction.subscribe(value => {
                 console.log('Critical function completed')
             })
@@ -99,6 +101,12 @@ export class ChildServer implements HeartbeatSender {
             } else {
                 res.sendStatus(500);
             }
+
+        })
+        this.app.get('/isRunning', (req, res) => {
+
+            let responseMessage: HeartBeatMessage = { PID: process.pid, isPrimary: this.isPrimary, isAlive: true, isRunning: this.isRunning };
+            res.json(responseMessage);
 
         })
     }

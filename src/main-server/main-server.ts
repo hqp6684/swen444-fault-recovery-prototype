@@ -82,7 +82,6 @@ export class MainServer implements HeartbeatReceiver {
         this.spawnPrimaryProcess();
         this.spawnSecondaryProcess();
 
-        this.setPrimary();
         this.checkAlive();
     }
 
@@ -112,6 +111,7 @@ export class MainServer implements HeartbeatReceiver {
 
 
     setPrimary() {
+        console.log('Setting primary process/Starting critical function');
         let url = `http://localhost:${this.primaryProcessPort}/isPrimary`;
         request.get(url, (error, res: request.RequestResponse, body) => {
             console.log(body);
@@ -159,6 +159,12 @@ export class MainServer implements HeartbeatReceiver {
                 } else {
 
                     console.log('Primary is alive');
+                    this.checkIsRunning()
+                        .subscribe(isRunning => {
+                            if (!isRunning) {
+                                this.setPrimary();
+                            }
+                        })
                 }
 
             })
@@ -188,6 +194,22 @@ export class MainServer implements HeartbeatReceiver {
                 console.log('Secondadry child process is alive');
                 result.next(true);
             }
+            result.complete();
+
+        })
+        return result;
+
+    }
+
+    checkIsRunning() {
+        let result = new AsyncSubject<boolean>();
+
+        console.log('Checking secondary process: ');
+
+        let url = `http://localhost:${this.primaryProcessPort}/isRunning`;
+        request.get(url, (error, res: request.RequestResponse, body) => {
+            let message: HeartBeatMessage = JSON.parse(body);
+            result.next(message.isRunning);
             result.complete();
 
         })
