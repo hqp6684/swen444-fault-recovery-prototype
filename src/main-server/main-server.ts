@@ -94,7 +94,7 @@ export class MainServer implements HeartbeatReceiver {
         this.primaryProcessPort = MainServer.childProcessPortCounter;
         this.primaryProcess = spawn('node', [childServerFilePath, this.primaryProcessPort.toString(), this.port.toString()]);
         this.primaryProcess.stdout.on('data', (data: any) => {
-            console.log(`Primary stdout: ${data}`);
+            console.log(`${data}`);
         });
 
     }
@@ -105,7 +105,7 @@ export class MainServer implements HeartbeatReceiver {
         this.secondaryProcessPort = MainServer.childProcessPortCounter;
         this.secondaryProcess = spawn('node', [childServerFilePath, this.secondaryProcessPort.toString(), this.port.toString()]);
         this.secondaryProcess.stdout.on('data', (data: any) => {
-            console.log(`Secondary stdout: ${data}`);
+            console.log(`${data}`);
         });
     }
 
