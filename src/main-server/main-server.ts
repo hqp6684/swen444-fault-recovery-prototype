@@ -6,6 +6,7 @@ import * as bodyParser from 'body-parser';
 // import * as childProcess from 'child_process';
 import * as path from 'path';
 import { ChildProcess } from 'child_process';
+import * as request from 'request';
 // const spawn = require('child_process').spawn;
 
 export class MainServer implements HeartbeatReceiver {
@@ -50,13 +51,20 @@ export class MainServer implements HeartbeatReceiver {
         this.lastUpdateTime = new Date();
         // origin of this server is : http://localhost:port
         // let receiverEndPoint = '/heartbeat';
-        // Listen to POST request from child server at http://localhost:port/heartbeat
-        this.app.post('/', this.processHeartBeatSignal)
+        // Listen to POST request from child server at http://localhost:port/k
+        // this.app.post('/', this.processHeartBeatSignal)
+        this.app.post('/', (req, res) => {
+            // console.log(req.body);
+        })
 
     }
 
     private processHeartBeatSignal(req: Request, res: Response) {
-        console.log(req.body);
+        // console.log(req.protocol);
+        // console.log(req.rawHeaders);
+        // console.log(req.)
+        // console.log(req.body);
+        res.send('received');
     }
 
 
@@ -71,13 +79,30 @@ export class MainServer implements HeartbeatReceiver {
 
             console.log(`Primary stdout: ${data}`);
         });
+        this.primaryProcess.on('error', (data: any) => {
+
+            console.log(`Primary stdout: ${data}`);
+        });
         //
         this.secondaryProcess = spawn('node', [childServerFilePath, `${this.port + 2}`, this.port.toString()]);
         this.secondaryProcess.stdout.on('data', (data: any) => {
             console.log(`Secondary stdout: ${data}`);
         });
+        this.secondaryProcess.on('error', (data: any) => {
+
+            console.log(`Primary stdout: ${data}`);
+        });
+
+        this.setPrimary();
     }
 
 
+
+    setPrimary() {
+        request.get('http://localhost:8081/isPrimary', (res) => {
+            console.log(res.body);
+        })
+
+    }
 
 }
