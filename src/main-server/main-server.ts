@@ -131,6 +131,7 @@ export class MainServer implements HeartbeatReceiver {
             console.log(`Last update time: `);
             console.log(this.lastUpdateTime);
             this.lastUpdateTime = new Date();
+            console.log('');
 
             console.log('Checking primary process:');
 
@@ -138,6 +139,7 @@ export class MainServer implements HeartbeatReceiver {
             request.get(url, (error, res: request.RequestResponse, body) => {
 
                 if (error) { // child process died
+                    console.log('');
                     console.log('Primary Child Process dead')
                     // check secondary
                     this.checkSecondaryAlive()
@@ -159,6 +161,7 @@ export class MainServer implements HeartbeatReceiver {
                 } else {
 
                     console.log('Primary is alive');
+                    console.log('');
                     this.checkIsRunning()
                         .subscribe(isRunning => {
                             if (!isRunning) {
@@ -168,6 +171,7 @@ export class MainServer implements HeartbeatReceiver {
                 }
 
             })
+            console.log('');
 
 
         }, this.checkingInterval)
@@ -201,10 +205,14 @@ export class MainServer implements HeartbeatReceiver {
 
     }
 
+
+    /**
+     * Check if the critical function is running
+     */
     checkIsRunning() {
         let result = new AsyncSubject<boolean>();
 
-        console.log('Checking secondary process: ');
+        // console.log('Checking secondary process: ');
 
         let url = `http://localhost:${this.primaryProcessPort}/isRunning`;
         request.get(url, (error, res: request.RequestResponse, body) => {

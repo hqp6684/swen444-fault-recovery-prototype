@@ -84,9 +84,13 @@ export class ChildServer implements HeartbeatSender {
             this.isPrimary = true;
             let responseMessage: HeartBeatMessage = { PID: process.pid, isPrimary: this.isPrimary, isAlive: true };
             res.json(responseMessage);
-            console.log('iam now the primary');
+            console.log('');
+
+            console.log(`PID : ${process.pid} is now the primary`);
+            console.log('');
             console.log('Activating critical function');
             this.isRunning = true;
+
             this.criticalFunction.subscribe(value => {
                 console.log('Critical function completed')
             })
